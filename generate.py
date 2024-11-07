@@ -12,15 +12,21 @@ from einops import rearrange
 from torch import autocast
 from safetensors.torch import load_model
 import argparse
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 assert torch.cuda.is_available()
 device = "cuda:0"
+MODEL_PATH = os.getenv("MODEL_PATH")
+OUTPUT_PATH = os.getenv("OUTPUT_PATH")
 
 parse = argparse.ArgumentParser()
 
 parse.add_argument('--oasis-ckpt', type=str, help='Path to Oasis DiT checkpoint.', default="oasis500m.safetensors")
 parse.add_argument('--vae-ckpt', type=str, help='Path to Oasis ViT-VAE checkpoint.', default="vit-l-20.safetensors")
 parse.add_argument('--num-frames', type=int, help='How many frames should be generated?', default=32)
-parse.add_argument('--output-path', type=str, help='Path where generated video should be saved.', default="video.mp4")
+parse.add_argument('--output-path', type=str, help='Path where generated video should be saved.', default=OUTPUT_PATH + "video.mp4")
 parse.add_argument('--fps', type=int, help='What framerate should be used to save the output?', default=20)
 parse.add_argument('--ddim-steps', type=int, help='How many DDIM steps?', default=50)
 
@@ -29,19 +35,19 @@ args = parse.parse_args()
 # load DiT checkpoint
 model = DiT_models["DiT-S/2"]()
 if args.oasis_ckpt.endswith(".pt"):
-    ckpt = torch.load(args.oasis_ckpt, weights_only=True)
+    ckpt = torch.load(MODEL_PATH + args.oasis_ckpt, weights_only=True)
     model.load_state_dict(ckpt, strict=False)
 elif args.oasis_ckpt.endswith(".safetensors"):
-    load_model(model, args.oasis_ckpt)
+    load_model(model, MODEL_PATH + args.oasis_ckpt)
 model = model.to(device).eval()
 
 # load VAE checkpoint
 vae = VAE_models["vit-l-20-shallow-encoder"]()
 if args.vae_ckpt.endswith(".pt"):
-    vae_ckpt = torch.load(args.vae_ckpt, weights_only=True)
+    vae_ckpt = torch.load(MODEL_PATH + args.vae_ckpt, weights_only=True)
     vae.load_state_dict(vae_ckpt)
 elif args.vae_ckpt.endswith(".safetensors"):
-    load_model(vae, args.vae_ckpt)
+    load_model(vae, MODEL_PATH + args.vae_ckpt)
 vae = vae.to(device).eval()
 
 # sampling params
